@@ -1,0 +1,33 @@
+version: '3.8'
+
+services:
+  dev-connector-postgresql:
+    image: postgres:15
+    container_name: dev-connector-database
+    environment:
+     - POSTGRES_DB=dev_connector
+     - POSTGRES_USER=postgres
+     - POSTGRES_PASSWORD=postgres
+    ports:
+    - '5432:5432'
+    volumes:
+    - pg_data:/var/lib/postgresql/data
+
+  web:
+    build: .
+    container_name: dev-connector
+    ports:
+      - '8000:8000'
+    volumes:
+      - .:/app
+    environment:
+      - DATABASE_NAME=dev_connector
+      - DATABASE_USER=postgres
+      - DATABASE_PASSWORD=postgres
+      - DATABASE_HOST=dev-connector-postgresql
+      - DATABASE_PORT=5432
+    depends_on:
+      - dev-connector-postgresql
+
+volumes:
+  pg_data:

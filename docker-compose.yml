@@ -1,0 +1,67 @@
+version: '3.8'
+
+services:
+  dev-connector-postgresql:
+    image: postgres:15
+    container_name: dev-connector-database
+    environment:
+     - POSTGRES_DB=dev_connector
+     - POSTGRES_USER=postgres
+     - POSTGRES_PASSWORD=postgres
+    ports:
+    - '5433:5432'
+    volumes:
+    - pg_data:/var/lib/postgresql/data
+    # add a health check to the database service
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+
+    container_name: dev-connector
+    ports:
+      - '8000:8000'
+
+    environment:
+      - DATABASE_NAME=dev_connector
+      - DATABASE_USER=postgres
+      - DATABASE_PASSWORD=postgres
+      - DATABASE_HOST=dev-connector-postgresql
+      - DATABASE_PORT=5432
+    
+    volumes:
+      - ./backend:/app/backend
+
+    depends_on:
+      # add a condition to wait for the database service to be healthy
+      dev-connector-postgresql:
+        condition: service_healthy
+    # add a restart policy to the backend service
+    restart: on-failure
+    
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+
+    ports:
+      - '3000:3000'
+
+    volumes:
+      - ./frontend:/app/frontend
+
+    depends_on:
+      - backend
+
+    # add the env_file attribute and the path to the .env file
+    env_file:
+      - ./frontend/.env
+      
+volumes:
+  pg_data:
